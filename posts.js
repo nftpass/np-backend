@@ -17,7 +17,9 @@ router.get("/get_score/:address", (req, res) => {
     msgAttributes = {}
     pusher.sendMessage(msgAttributes, req.params.address, (success) => {
         return res.send({
-            'successful': success,
+            normalized_score: 1,
+            unnormalized_score: 214,
+            percentile: 53
         });
     })
 });
