@@ -20,12 +20,14 @@
   "homepage": "https://github.com/nftpass/np-backend#readme",
   "dependencies": {
     "aws-sdk": "^2.1013.0",
+    "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "mongo-sanitize": "^1.1.0",
     "mongoose": "^6.0.12",
     "morgan": "^1.10.0",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "web3": "^1.6.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.14"
