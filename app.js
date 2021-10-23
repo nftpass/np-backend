@@ -1,5 +1,4 @@
 const express = require("express");
-const morgan = require("morgan");
 const mongoose = require("mongoose");
 require("dotenv").config();
 
@@ -22,7 +21,6 @@ mongoose
 
 const PORT = process.env.PORT || 5000; //Declare the port number
 app.use(express.json()); //allows us to access request body as req.body
-app.use(morgan("dev"));  //enable incoming request logging in dev mode
 
 pusher.init()
 
