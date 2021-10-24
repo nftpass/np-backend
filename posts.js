@@ -77,7 +77,7 @@ router.get("/sign/:address", (req, res) => {
 router.get("/uploadToIPFS/:score", (req, res) => {
     const editedSVG = svg(req.params.score)
     console.log(editedSVG)
-    return res.send({editedSVG})
+    return res.send({editedSVG: `${editedSVG}`})
     
 });
 
