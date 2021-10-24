@@ -60,7 +60,9 @@ router.get("/sign/:address", async (req, res) => {
     const nonce = between(0, Number.MAX_SAFE_INTEGER)
     try{
         let score = await historicalRecordsCol.findOne({address: req.params.address.toLowerCase()})
+        console.log(score)
         score = score ? score.score : 0
+        console.log(score)
         let hashMessage = web3.utils.soliditySha3(req.params.address, score, nonce)
         let signature = web3.eth.accounts.sign(hashMessage, process.env.PRIVATE_KEY)
         return res.send({messageHash: signature.messageHash, signature: signature.signature, nonce, score})
