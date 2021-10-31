@@ -7,7 +7,7 @@ const pusher = require('./pusher');
 const firebaseApp = require('firebase/app');
 const firebaseDatabase = require("firebase/database");
 const { MongoClient } = require('mongodb');
-
+const {shortenAddress} = require('./helpers/address');
 const mongoURI = process.env.MONGO_URL || '';
 const dbName = process.env.MONGO_DB_NAME || '';
 
@@ -30,7 +30,6 @@ client.connect();
 
 const db = client.db(dbName);
 historicalRecordsCol = db.collection('historicalRecords');
-console.log(historicalRecordsCol)
 
 pusher.init()
 
@@ -49,6 +48,27 @@ router.get("/get_score/:address", (req, res) => {
     })
 });
 
+router.get("/get_percentile/:address", async (req, res) => {
+    try{
+        let addressDoc = await historicalRecordsCol.findOne({"address": req.params.address});
+        if (addressDoc){
+            let totalScores = 1; //add to avoid dividing by zero
+            //this assumes we don't have repeadted documents with the same address
+            let countInCol = await historicalRecordsCol.count();
+            totaScores = countInCol || totalScores;
+            const numOfLargerScores = await historicalRecordsCol.countDocuments({
+                "score": {"$gte": addressDoc.score}
+            });
+            const percentile = Math.round(((1-numOfLargerScores/totaScores)*100));
+            return res.send({'percentile': percentile});
+        }
+        console.error('Error computing percentile')
+        return res.send({'percentile': 0});
+    } catch(e) {
+        console.log(e)
+    }
+});
+
 function between(min, max) {  
     return Math.floor(
       Math.random() * (max - min) + min
@@ -56,13 +76,11 @@ function between(min, max) {
 }
 
 router.get("/sign/:address", async (req, res) => {
-    const web3 = new Web3(process.env.RINKEBY_URL)
-    const nonce = between(0, Number.MAX_SAFE_INTEGER)
+    const web3 = new Web3(process.env.RINKEBY_URL);
+    const nonce = between(0, Number.MAX_SAFE_INTEGER);
     try{
         let score = await historicalRecordsCol.findOne({address: req.params.address.toLowerCase()})
-        console.log(score)
         score = score ? score.score : 0
-        console.log(score)
         let hashMessage = web3.utils.soliditySha3(req.params.address, score, nonce)
         let signature = web3.eth.accounts.sign(hashMessage, process.env.PRIVATE_KEY)
         return res.send({messageHash: signature.messageHash, signature: signature.signature, nonce, score})
@@ -70,6 +88,20 @@ router.get("/sign/:address", async (req, res) => {
         console.log(e)
     }
     
+});
+
+router.get("/rank", async (req, res) => {
+    try{
+        let rank = await historicalRecordsCol.find().sort({"score": -1}).limit(10).toArray();
+        rank = rank.map((address) => {
+            address.address = shortenAddress(address.address)
+            return address;
+        })
+        return res.send(rank);
+    } catch(e) {
+        console.log(e)
+    }
+
 });
 
 
