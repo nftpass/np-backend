@@ -40,8 +40,11 @@ router.get("/ping", (req, res) => {
 });
 
 router.get("/get_score/:address", (req, res) => {
+    const address = req.params.address && req.params.address.toLowerCase();
+    if(!address)
+        return
     msgAttributes = {}
-    pusher.sendMessage(msgAttributes, req.params.address, (success) => {
+    pusher.sendMessage(msgAttributes, address, (success) => {
         return res.send({
             success
         });
@@ -50,20 +53,39 @@ router.get("/get_score/:address", (req, res) => {
 
 router.get("/get_percentile/:address", async (req, res) => {
     try{
-        let addressDoc = await historicalRecordsCol.findOne({"address": req.params.address});
+        const address = req.params.address && req.params.address.toLowerCase();
+        if(!address)
+            return
+        let addressDoc = await historicalRecordsCol.findOne({"address": address});
         if (addressDoc){
-            let totalScores = 1; //add to avoid dividing by zero
             //this assumes we don't have repeadted documents with the same address
-            let countInCol = await historicalRecordsCol.count();
-            totaScores = countInCol || totalScores;
+            let totalScores = await historicalRecordsCol.count();
             const numOfLargerScores = await historicalRecordsCol.countDocuments({
-                "score": {"$gte": addressDoc.score}
+                "score": {"$gt": addressDoc.score}
             });
-            const percentile = Math.round(((1-numOfLargerScores/totaScores)*100));
-            return res.send({'percentile': percentile});
+            const percentile = Math.round(((1-numOfLargerScores/totalScores)*100));
+            return res.send({
+                'percentile': percentile,
+                'totalScores': totalScores,
+                'numOfLargerScores': numOfLargerScores,
+                'score': addressDoc.score
+            });
         }
         console.error('Error computing percentile')
         return res.send({'percentile': 0});
+    } catch(e) {
+        console.log(e)
+    }
+});
+
+router.get("/rank", async (req, res) => {
+    try{
+        let rank = await historicalRecordsCol.find().sort({"score": -1}).limit(10).toArray();
+        rank = rank.map((address) => {
+            address.address = shortenAddress(address.address)
+            return address;
+        })
+        return res.send(rank);
     } catch(e) {
         console.log(e)
     }
@@ -88,20 +110,6 @@ router.get("/sign/:address", async (req, res) => {
         console.log(e)
     }
     
-});
-
-router.get("/rank", async (req, res) => {
-    try{
-        let rank = await historicalRecordsCol.find().sort({"score": -1}).limit(10).toArray();
-        rank = rank.map((address) => {
-            address.address = shortenAddress(address.address)
-            return address;
-        })
-        return res.send(rank);
-    } catch(e) {
-        console.log(e)
-    }
-
 });
 
 
